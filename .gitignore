@@ -1,0 +1,18 @@
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# 편집기
+.vscode/
+.idea/
+*.swp
+*~
+
+# 내보낸 백업 파일 (회원 개인정보가 들어있으므로 커밋 금지)
+pt-스케줄-*.json
+*.backup.json
+
+# 의존성 (이 프로젝트는 쓰지 않지만 실수 방지)
+node_modules/

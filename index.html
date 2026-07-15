@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="퍼스널 트레이너를 위한 회원 관리 및 PT 시간표 자동 스케줄링">
+<meta name="theme-color" content="#0f172a">
+<title>PT 스케줄러</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗓️</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="appbar">
+  <div class="appbar__inner">
+    <h1 class="brand"><span class="brand__mark">PT</span> 스케줄러</h1>
+    <nav class="tabs" role="tablist" aria-label="주요 메뉴">
+      <button class="tab is-active" role="tab" data-tab="timetable" aria-selected="true">시간표</button>
+      <button class="tab" role="tab" data-tab="members" aria-selected="false">회원</button>
+      <button class="tab" role="tab" data-tab="settings" aria-selected="false">설정</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ══════════════════ 시간표 ══════════════════ -->
+  <section class="panel is-active" id="panel-timetable" role="tabpanel">
+
+    <div class="toolbar">
+      <div class="toolbar__main">
+        <button class="btn btn--primary" id="btn-auto">자동 배정</button>
+        <button class="btn" id="btn-clear-unlocked">배정 초기화</button>
+        <button class="btn" id="btn-print">인쇄 / PDF</button>
+      </div>
+      <div class="toolbar__side">
+        <label class="switch">
+          <input type="checkbox" id="chk-compact">
+          <span>업무시간만 보기</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <div id="schedule-report"></div>
+
+    <div class="hint">
+      셀을 <b>클릭</b>하면 회원을 직접 배정하거나 바꿀 수 있고, 배정된 세션은 <b>드래그</b>해서 옮길 수 있습니다.
+      자물쇠(🔒)로 고정한 세션은 자동 배정을 다시 돌려도 그대로 유지됩니다.
+    </div>
+
+    <div class="grid-scroll">
+      <div class="grid" id="timetable"></div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <!-- ══════════════════ 회원 ══════════════════ -->
+  <section class="panel" id="panel-members" role="tabpanel">
+
+    <div class="toolbar">
+      <div class="toolbar__main">
+        <button class="btn btn--primary" id="btn-add-member">+ 회원 등록</button>
+      </div>
+      <div class="toolbar__side">
+        <input type="search" class="input input--search" id="member-search" placeholder="이름 · 연락처 검색">
+      </div>
+    </div>
+
+    <div class="member-list" id="member-list"></div>
+  </section>
+
+  <!-- ══════════════════ 설정 ══════════════════ -->
+  <section class="panel" id="panel-settings" role="tabpanel">
+
+    <div class="card">
+      <h2 class="card__title">운영 시간</h2>
+      <p class="card__desc">자동 배정은 아래 요일·시간 안에서만 이뤄집니다. 24시간제로 입력하세요.</p>
+      <div class="openhours" id="openhours"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card__title">배정 규칙</h2>
+      <div class="rules">
+        <label class="switch">
+          <input type="checkbox" id="rule-one-per-day">
+          <span>같은 회원은 하루에 최대 1회만 배정</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="rule-spread">
+          <span>주중에 최대한 고르게 분산 배정</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card__title">데이터</h2>
+      <p class="card__desc">
+        모든 자료는 이 브라우저에만 저장됩니다. 기기를 바꾸거나 백업하려면 파일로 내보내세요.
+      </p>
+      <div class="toolbar__main">
+        <button class="btn" id="btn-export">내보내기 (.json)</button>
+        <button class="btn" id="btn-import">불러오기</button>
+        <button class="btn btn--danger" id="btn-reset">전체 초기화</button>
+      </div>
+      <input type="file" id="file-import" accept="application/json,.json" hidden>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════ 회원 등록/수정 모달 ══════════════════ -->
+<dialog class="modal" id="modal-member">
+  <form method="dialog" class="modal__box" id="form-member">
+    <h2 class="modal__title" id="modal-member-title">회원 등록</h2>
+
+    <div class="field">
+      <label class="label" for="f-name">이름</label>
+      <input class="input" id="f-name" name="name" required maxlength="20" autocomplete="off" placeholder="홍길동">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="label" for="f-phone">연락처</label>
+        <input class="input" id="f-phone" name="phone" maxlength="20" autocomplete="off" placeholder="010-0000-0000">
+      </div>
+      <div class="field">
+        <label class="label" for="f-sessions">주당 횟수</label>
+        <input class="input" id="f-sessions" name="sessions" type="number" min="0" max="14" step="1" value="2" required>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label" for="f-color">색상</label>
+      <div class="swatches" id="f-color"></div>
+    </div>
+
+    <div class="field">
+      <label class="label" for="f-memo">메모</label>
+      <textarea class="input" id="f-memo" name="memo" rows="2" maxlength="200" placeholder="특이사항, 운동 목표 등"></textarea>
+    </div>
+
+    <div class="modal__actions">
+      <button class="btn" value="cancel" type="submit" formnovalidate>취소</button>
+      <button class="btn btn--primary" id="btn-save-member" value="save">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ══════════════════ 가능 시간 편집 모달 ══════════════════ -->
+<dialog class="modal modal--wide" id="modal-avail">
+  <div class="modal__box">
+    <h2 class="modal__title">가능 시간 — <span id="avail-name"></span></h2>
+    <p class="card__desc">
+      드래그해서 칠하면 <b>가능</b>, 칠해진 곳을 다시 드래그하면 <b>해제</b>됩니다. 회색 배경은 운영 시간 밖입니다.
+    </p>
+
+    <div class="toolbar">
+      <div class="toolbar__main">
+        <button class="btn btn--sm" id="btn-avail-all">운영시간 전체</button>
+        <button class="btn btn--sm" id="btn-avail-none">모두 해제</button>
+        <button class="btn btn--sm" id="btn-avail-copy">다른 회원에서 복사</button>
+      </div>
+      <div class="toolbar__side">
+        <span class="pill" id="avail-count">0칸</span>
+      </div>
+    </div>
+
+    <div class="grid-scroll grid-scroll--modal">
+      <div class="grid grid--avail" id="avail-grid"></div>
+    </div>
+
+    <div class="modal__actions">
+      <button class="btn btn--primary" id="btn-avail-close">완료</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ══════════════════ 셀 배정 팝오버 ══════════════════ -->
+<div class="popover" id="popover" hidden>
+  <div class="popover__head" id="popover-head"></div>
+  <div class="popover__list" id="popover-list"></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/util.js"></script>
+<script src="js/store.js"></script>
+<script src="js/scheduler.js"></script>
+<script src="js/ui-members.js"></script>
+<script src="js/ui-availability.js"></script>
+<script src="js/ui-timetable.js"></script>
+<script src="js/ui-settings.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
