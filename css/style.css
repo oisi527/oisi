@@ -726,7 +726,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
   position: relative;
   background: var(--surface);
   border-radius: 14px;
-  padding: 40px;
+  padding: 22px;
   width: 420px;
   max-width: 100%;
   box-shadow: var(--shadow-lg);
